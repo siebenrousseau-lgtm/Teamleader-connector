@@ -91,11 +91,58 @@ function buildMcpServer() {
     {
       title: "Zoek deals/offertes in Teamleader",
       description:
-        "Zoekt deals (offertes/projecten) in Teamleader op basis van een zoekterm, bv. een klantnaam of projectnaam.",
-      inputSchema: { query: z.string().describe("Zoekterm, bv. 'Destelbergen' of 'Stadsbader'") },
+        "Zoekt deals (offertes/projecten) in Teamleader. Alle velden zijn optioneel en mogen " +
+        "gecombineerd worden: zoekterm, status, fase, en/of datumfilters. Gebruik 'list_deal_phases' " +
+        "om de juiste phase_id op te zoeken als je op een specifieke fase wil filteren.",
+      inputSchema: {
+        query: z
+          .string()
+          .optional()
+          .describe("Zoekterm, bv. 'Destelbergen' of 'Stadsbader' (optioneel)"),
+        status: z
+          .enum(["open", "won", "lost"])
+          .optional()
+          .describe("Filter op status van de deal (optioneel)"),
+        phase_id: z
+          .string()
+          .optional()
+          .describe("Filter op een specifieke fase — ID op te zoeken via 'list_deal_phases' (optioneel)"),
+        created_before: z
+          .string()
+          .optional()
+          .describe("Enkel deals aangemaakt vóór deze datum, formaat YYYY-MM-DD (optioneel)"),
+        updated_since: z
+          .string()
+          .optional()
+          .describe("Enkel deals gewijzigd sinds deze datum, formaat YYYY-MM-DD (optioneel)"),
+        closing_date_from: z
+          .string()
+          .optional()
+          .describe("Verwachte afsluitdatum vanaf deze datum, formaat YYYY-MM-DD (optioneel)"),
+        closing_date_until: z
+          .string()
+          .optional()
+          .describe("Verwachte afsluitdatum tot deze datum, formaat YYYY-MM-DD (optioneel)"),
+      },
     },
-    async ({ query }) => {
-      const data = await teamleader.searchDeals(query);
+    async ({
+      query,
+      status,
+      phase_id,
+      created_before,
+      updated_since,
+      closing_date_from,
+      closing_date_until,
+    }) => {
+      const data = await teamleader.searchDeals({
+        query,
+        status,
+        phaseId: phase_id,
+        createdBefore: created_before,
+        updatedSince: updated_since,
+        closingDateFrom: closing_date_from,
+        closingDateUntil: closing_date_until,
+      });
       return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
     }
   );
@@ -109,6 +156,26 @@ function buildMcpServer() {
     },
     async ({ id }) => {
       const data = await teamleader.getDeal(id);
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    }
+  );
+
+  server.registerTool(
+    "list_deal_phases",
+    {
+      title: "Toon beschikbare deal-fases",
+      description:
+        "Geeft de lijst van fases (pipeline-stappen) die deals kunnen doorlopen, met hun ID en naam. " +
+        "Gebruik dit om de juiste 'phase_id' te vinden voor search_deals.",
+      inputSchema: {
+        pipeline_id: z
+          .string()
+          .optional()
+          .describe("Optioneel: beperk de lijst tot een specifieke pipeline"),
+      },
+    },
+    async ({ pipeline_id }) => {
+      const data = await teamleader.listDealPhases(pipeline_id);
       return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
     }
   );

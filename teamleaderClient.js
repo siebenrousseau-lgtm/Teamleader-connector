@@ -21,15 +21,49 @@ async function callApi(action, body = {}) {
 }
 
 // ---- Deals (offertes / projecten) ----
-async function searchDeals(query, pageSize = 20) {
+// Ondersteunt optioneel: zoekterm, status (open/won/lost), een specifieke fase
+// (phase_id, op te zoeken via listDealPhases), en datumfilters:
+//   - createdBefore          -> enkel deals aangemaakt vóór deze datum
+//   - updatedSince           -> enkel deals gewijzigd sinds deze datum
+//   - closingDateFrom/Until  -> op verwachte afsluitdatum
+async function searchDeals(
+  {
+    query,
+    status,
+    phaseId,
+    createdBefore,
+    updatedSince,
+    closingDateFrom,
+    closingDateUntil,
+  } = {},
+  pageSize = 50
+) {
+  const filter = {};
+  if (query) filter.term = query;
+  if (status) filter.status = Array.isArray(status) ? status : [status];
+  if (phaseId) filter.phase_id = phaseId;
+  if (createdBefore) filter.created_before = createdBefore;
+  if (updatedSince) filter.updated_since = updatedSince;
+  if (closingDateFrom) filter.estimated_closing_date_from = closingDateFrom;
+  if (closingDateUntil) filter.estimated_closing_date_until = closingDateUntil;
+
   return callApi("deals.list", {
-    filter: query ? { term: query } : undefined,
+    filter: Object.keys(filter).length ? filter : undefined,
     page: { size: pageSize, number: 1 },
   });
 }
 
 async function getDeal(id) {
   return callApi("deals.info", { id });
+}
+
+// Geeft de lijst van fases (pipeline-stappen) terug, met hun id en naam.
+// Handig om de juiste phase_id op te zoeken voor searchDeals hierboven.
+async function listDealPhases(pipelineId) {
+  return callApi(
+    "dealPhases.list",
+    pipelineId ? { filter: { pipeline_id: pipelineId } } : {}
+  );
 }
 
 // ---- Contacten ----
@@ -74,6 +108,7 @@ async function getInvoice(id) {
 module.exports = {
   searchDeals,
   getDeal,
+  listDealPhases,
   searchContacts,
   searchCompanies,
   searchInvoices,
