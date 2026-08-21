@@ -40,8 +40,8 @@ app.use(express.json());
 // 1. OAuth2-koppeling
 // ---------------------------------------------------------------------
 
-app.get("/", (req, res) => {
-  const tokens = readTokens();
+app.get("/", async (req, res) => {
+  const tokens = await readTokens();
   res.send(`
     <h1>Teamleader connector</h1>
     <p>Status: ${tokens ? "✅ gekoppeld met Teamleader" : "❌ nog niet gekoppeld"}</p>
@@ -194,8 +194,15 @@ app.post("/mcp", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Teamleader-connector draait op poort ${PORT}`);
-  console.log(`Open http://localhost:${PORT} om de koppelstatus te zien.`);
-});
+// Lokaal (met "npm start") draait dit als een gewone, altijd-luisterende
+// server. Op Vercel wordt de app zelf geëxporteerd en als serverless
+// functie aangeroepen — vandaar de "require.main === module"-check.
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Teamleader-connector draait op poort ${PORT}`);
+    console.log(`Open http://localhost:${PORT} om de koppelstatus te zien.`);
+  });
+}
+
+module.exports = app;

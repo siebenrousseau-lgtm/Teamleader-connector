@@ -4,31 +4,27 @@
 //
 // Belangrijk: Teamleader's refresh tokens zijn "single use" — telkens je
 // een nieuwe access token opvraagt met de refresh token, krijg je ook een
-// gloednieuwe refresh token terug die de oude vervangt. Daarom
-// slaan we de tokens op in een lokaal bestand (tokens.json) in plaats van
-// enkel in het geheugen: zo overleeft de login een herstart van de server.
+// gloednieuwe refresh token terug die de oude vervangt.
 //
-// tokens.json wordt NOOIT mee gecommit (zie .gitignore) — behandel het
-// bestand als een wachtwoord.
+// We slaan de tokens op in Upstash Redis (gratis, geen kaart nodig) in
+// plaats van een lokaal bestand. Dat is nodig omdat hostingdiensten zoals
+// Vercel de code "serverless" draaien: elke aanvraag kan op een ander,
+// tijdelijk exemplaar van de server terechtkomen, waardoor een lokaal
+// bestand niet betrouwbaar bewaard blijft tussen aanvragen door.
 
-const fs = require("fs");
-const path = require("path");
+const { Redis } = require("@upstash/redis");
 const axios = require("axios");
 
-const TOKENS_PATH = path.join(__dirname, "tokens.json");
+const redis = Redis.fromEnv(); // leest UPSTASH_REDIS_REST_URL / _TOKEN uit .env
+const REDIS_KEY = "teamleader_tokens";
 const TOKEN_URL = "https://focus.teamleader.eu/oauth2/access_token";
 
-function readTokens() {
-  if (!fs.existsSync(TOKENS_PATH)) return null;
-  try {
-    return JSON.parse(fs.readFileSync(TOKENS_PATH, "utf8"));
-  } catch (e) {
-    return null;
-  }
+async function readTokens() {
+  return await redis.get(REDIS_KEY); // geeft null terug als er nog niets is opgeslagen
 }
 
-function writeTokens(tokens) {
-  fs.writeFileSync(TOKENS_PATH, JSON.stringify(tokens, null, 2), "utf8");
+async function writeTokens(tokens) {
+  await redis.set(REDIS_KEY, tokens);
 }
 
 async function exchangeCodeForTokens(code) {
@@ -44,12 +40,12 @@ async function exchangeCodeForTokens(code) {
     refresh_token: res.data.refresh_token,
     expires_at: Date.now() + res.data.expires_in * 1000 - 30_000, // 30s speling
   };
-  writeTokens(tokens);
+  await writeTokens(tokens);
   return tokens;
 }
 
 async function refreshTokens() {
-  const current = readTokens();
+  const current = await readTokens();
   if (!current || !current.refresh_token) {
     throw new Error(
       "Geen refresh token gevonden. Doorloop eerst de eenmalige koppeling via /auth."
@@ -68,12 +64,12 @@ async function refreshTokens() {
     refresh_token: res.data.refresh_token || current.refresh_token,
     expires_at: Date.now() + res.data.expires_in * 1000 - 30_000,
   };
-  writeTokens(tokens);
+  await writeTokens(tokens);
   return tokens;
 }
 
 async function getValidAccessToken() {
-  let tokens = readTokens();
+  let tokens = await readTokens();
   if (!tokens) {
     throw new Error(
       "Nog niet gekoppeld met Teamleader. Open /auth in de browser en rond de koppeling af."
