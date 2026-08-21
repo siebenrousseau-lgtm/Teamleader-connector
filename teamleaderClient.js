@@ -49,9 +49,20 @@ async function searchCompanies(query, pageSize = 20) {
 }
 
 // ---- Facturen ----
-async function searchInvoices(query, pageSize = 20) {
+// Ondersteunt optioneel: een zoekterm, een periode (factuurdatum) en een status
+// ("draft" = concept, "outstanding" = nog niet volledig betaald, "matched" = betaald/vereffend).
+async function searchInvoices(
+  { query, dateFrom, dateTo, status } = {},
+  pageSize = 50
+) {
+  const filter = {};
+  if (query) filter.term = query;
+  if (dateFrom) filter.invoice_date_after = dateFrom;
+  if (dateTo) filter.invoice_date_before = dateTo;
+  if (status) filter.status = Array.isArray(status) ? status : [status];
+
   return callApi("invoices.list", {
-    filter: query ? { term: query } : undefined,
+    filter: Object.keys(filter).length ? filter : undefined,
     page: { size: pageSize, number: 1 },
   });
 }

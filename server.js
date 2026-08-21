@@ -143,11 +143,37 @@ function buildMcpServer() {
     "search_invoices",
     {
       title: "Zoek facturen",
-      description: "Zoekt facturen in Teamleader op basis van een zoekterm (klant, referentie, ...).",
-      inputSchema: { query: z.string().describe("Zoekterm, bv. klantnaam of factuurreferentie") },
+      description:
+        "Zoekt facturen in Teamleader. Alle velden zijn optioneel en mogen gecombineerd worden: " +
+        "zoekterm (klant/referentie), periode op factuurdatum, en/of betaalstatus.",
+      inputSchema: {
+        query: z
+          .string()
+          .optional()
+          .describe("Zoekterm, bv. klantnaam of factuurreferentie (optioneel)"),
+        date_from: z
+          .string()
+          .optional()
+          .describe("Alleen facturen met factuurdatum vanaf deze datum, formaat YYYY-MM-DD (optioneel)"),
+        date_to: z
+          .string()
+          .optional()
+          .describe("Alleen facturen met factuurdatum tot deze datum, formaat YYYY-MM-DD (optioneel)"),
+        status: z
+          .enum(["draft", "outstanding", "matched"])
+          .optional()
+          .describe(
+            "Filter op status: 'outstanding' = nog niet (volledig) betaald, 'matched' = betaald/vereffend, 'draft' = concept (optioneel)"
+          ),
+      },
     },
-    async ({ query }) => {
-      const data = await teamleader.searchInvoices(query);
+    async ({ query, date_from, date_to, status }) => {
+      const data = await teamleader.searchInvoices({
+        query,
+        dateFrom: date_from,
+        dateTo: date_to,
+        status,
+      });
       return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
     }
   );
