@@ -93,7 +93,9 @@ function buildMcpServer() {
       description:
         "Zoekt deals (offertes/projecten) in Teamleader. Alle velden zijn optioneel en mogen " +
         "gecombineerd worden: zoekterm, status, fase, en/of datumfilters. Gebruik 'list_deal_phases' " +
-        "om de juiste phase_id op te zoeken als je op een specifieke fase wil filteren.",
+        "om de juiste phase_id op te zoeken als je op een specifieke fase wil filteren. " +
+        "Haalt automatisch tot 500 resultaten op (over meerdere pagina's heen indien nodig) — " +
+        "het antwoord bevat 'truncated: true' als er nog meer resultaten waren dan dat.",
       inputSchema: {
         query: z
           .string()

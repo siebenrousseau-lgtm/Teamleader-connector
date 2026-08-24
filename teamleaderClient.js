@@ -26,6 +26,9 @@ async function callApi(action, body = {}) {
 //   - createdBefore          -> enkel deals aangemaakt vóór deze datum
 //   - updatedSince           -> enkel deals gewijzigd sinds deze datum
 //   - closingDateFrom/Until  -> op verwachte afsluitdatum
+// Haalt automatisch ALLE pagina's op (niet enkel de eerste), tot maxResults
+// bereikt is. Nodig voor analyses over grote periodes (bv. "top klanten in 2025"),
+// waar één pagina van 50 resultaten niet volstaat.
 async function searchDeals(
   {
     query,
@@ -36,7 +39,7 @@ async function searchDeals(
     closingDateFrom,
     closingDateUntil,
   } = {},
-  pageSize = 50
+  { maxResults = 500, pageSize = 100 } = {}
 ) {
   const filter = {};
   if (query) filter.term = query;
@@ -47,10 +50,27 @@ async function searchDeals(
   if (closingDateFrom) filter.estimated_closing_date_from = closingDateFrom;
   if (closingDateUntil) filter.estimated_closing_date_until = closingDateUntil;
 
-  return callApi("deals.list", {
-    filter: Object.keys(filter).length ? filter : undefined,
-    page: { size: pageSize, number: 1 },
-  });
+  let allDeals = [];
+  let page = 1;
+  let truncated = false;
+
+  while (allDeals.length < maxResults) {
+    const res = await callApi("deals.list", {
+      filter: Object.keys(filter).length ? filter : undefined,
+      page: { size: pageSize, number: page },
+    });
+    const batch = res.data || [];
+    allDeals = allDeals.concat(batch);
+
+    if (batch.length < pageSize) break; // laatste pagina bereikt
+    if (allDeals.length >= maxResults) {
+      truncated = true;
+      break;
+    }
+    page += 1;
+  }
+
+  return { data: allDeals.slice(0, maxResults), truncated };
 }
 
 async function getDeal(id) {
