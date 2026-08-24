@@ -125,6 +125,14 @@ function buildMcpServer() {
           .string()
           .optional()
           .describe("Verwachte afsluitdatum tot deze datum, formaat YYYY-MM-DD (optioneel)"),
+        start_page: z
+          .number()
+          .optional()
+          .describe(
+            "Geavanceerd/optioneel: op welke pagina van 100 resultaten te beginnen (standaard 1). " +
+              "Gebruik dit om verder te bladeren wanneer een vorig antwoord 'truncated: true' gaf — " +
+              "bv. start_page 6 om verder te gaan na de eerste 500 resultaten."
+          ),
       },
     },
     async ({
@@ -135,16 +143,20 @@ function buildMcpServer() {
       updated_since,
       closing_date_from,
       closing_date_until,
+      start_page,
     }) => {
-      const data = await teamleader.searchDeals({
-        query,
-        status,
-        phaseId: phase_id,
-        createdBefore: created_before,
-        updatedSince: updated_since,
-        closingDateFrom: closing_date_from,
-        closingDateUntil: closing_date_until,
-      });
+      const data = await teamleader.searchDeals(
+        {
+          query,
+          status,
+          phaseId: phase_id,
+          createdBefore: created_before,
+          updatedSince: updated_since,
+          closingDateFrom: closing_date_from,
+          closingDateUntil: closing_date_until,
+        },
+        start_page ? { startPage: start_page } : undefined
+      );
       return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
     }
   );

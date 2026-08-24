@@ -39,7 +39,7 @@ async function searchDeals(
     closingDateFrom,
     closingDateUntil,
   } = {},
-  { maxResults = 500, pageSize = 100 } = {}
+  { maxResults = 500, pageSize = 100, startPage = 1 } = {}
 ) {
   const filter = {};
   if (query) filter.term = query;
@@ -51,7 +51,7 @@ async function searchDeals(
   if (closingDateUntil) filter.estimated_closing_date_until = closingDateUntil;
 
   let allDeals = [];
-  let page = 1;
+  let page = startPage;
   let truncated = false;
 
   while (allDeals.length < maxResults) {
