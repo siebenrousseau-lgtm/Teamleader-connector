@@ -102,6 +102,10 @@ async function searchCompanies(query, pageSize = 20) {
   });
 }
 
+async function getCompany(id) {
+  return callApi("companies.info", { id });
+}
+
 // ---- Facturen ----
 // Ondersteunt optioneel: een zoekterm, een periode (factuurdatum) en een status
 // ("draft" = concept, "outstanding" = nog niet volledig betaald, "matched" = betaald/vereffend).
@@ -131,6 +135,7 @@ module.exports = {
   listDealPhases,
   searchContacts,
   searchCompanies,
+  getCompany,
   searchInvoices,
   getInvoice,
 };

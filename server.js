@@ -221,6 +221,19 @@ function buildMcpServer() {
   );
 
   server.registerTool(
+    "get_company",
+    {
+      title: "Haal details van één bedrijf op",
+      description: "Haalt de volledige details van één bedrijf op via het Teamleader-ID.",
+      inputSchema: { id: z.string().describe("Het Teamleader bedrijf-ID") },
+    },
+    async ({ id }) => {
+      const data = await teamleader.getCompany(id);
+      return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
+    }
+  );
+
+  server.registerTool(
     "search_invoices",
     {
       title: "Zoek facturen",
