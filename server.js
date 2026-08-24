@@ -125,7 +125,7 @@ function buildMcpServer() {
           .string()
           .optional()
           .describe("Verwachte afsluitdatum tot deze datum, formaat YYYY-MM-DD (optioneel)"),
-        start_page: z
+        start_page: z.coerce
           .number()
           .optional()
           .describe(
